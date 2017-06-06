@@ -30,6 +30,7 @@ from .forms import PostcodeLookupForm, AddressSelectForm
 from .helpers import (
     AddressSorter,
     DirectionsHelper,
+    get_territory,
     geocode,
     EveryElectionWrapper,
     MultipleCouncilsException,
@@ -84,7 +85,7 @@ class HomeView(WhiteLabelTemplateOverrideMixin, FormView):
 
     def form_valid(self, form):
 
-        postcode = form.cleaned_data['postcode'].replace(' ', '')
+        postcode = re.sub('[^A-Z0-9]', '', form.cleaned_data['postcode'])
 
         rh = RoutingHelper(postcode)
         endpoint = rh.get_endpoint()
@@ -154,11 +155,13 @@ class BasePollingStationView(
         self.station = self.get_station()
         self.directions = self.get_directions()
 
-        ee = EveryElectionWrapper(self.postcode)
-        context['has_election'] = ee.has_election()
+        #ee = EveryElectionWrapper(self.postcode)
+        #context['has_election'] = ee.has_election()
+        context['has_election'] = True
         if not context['has_election']:
             context['error'] = 'There are no upcoming elections in your area'
-        context['election_explainers'] = ee.get_explanations()
+        #context['election_explainers'] = ee.get_explanations()
+        context['election_explainers'] = []
 
         context['postcode'] = self.postcode
         context['location'] = self.location
@@ -167,7 +170,7 @@ class BasePollingStationView(
         context['directions'] = self.directions
         context['we_know_where_you_should_vote'] = self.station
         context['noindex'] = True
-
+        context['territory'] = get_territory(self.postcode)
         if not context['we_know_where_you_should_vote']:
             if l is None:
                 context['custom'] = None
@@ -188,7 +191,7 @@ class PostcodeView(BasePollingStationView):
             self.kwargs['postcode'] = kwargs['postcode'] = request.GET['postcode']
         if 'postcode' not in kwargs or kwargs['postcode'] == '':
             return HttpResponseRedirect(reverse('home'))
-        self.kwargs['postcode'] = kwargs['postcode'] = kwargs['postcode'].upper().replace(' ', '')
+        self.kwargs['postcode'] = kwargs['postcode'] = re.sub('[^A-Z0-9]', '', kwargs['postcode'].upper())
 
         rh = RoutingHelper(self.kwargs['postcode'])
         endpoint = rh.get_endpoint()
@@ -305,6 +308,8 @@ class MultipleCouncilsView(TemplateView, LogLookUpMixin, LanguageMixin):
         context['councils'] = []
         for council_id in self.council_ids:
             context['councils'].append(Council.objects.get(pk=council_id))
+
+        context['territory'] = get_territory(self.kwargs['postcode'])
 
         log_data = {
             'we_know_where_you_should_vote': False,

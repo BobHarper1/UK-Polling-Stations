@@ -1,6 +1,7 @@
 from django.core.management.base import BaseCommand
 from django.contrib.gis.geos import Point
 
+from addressbase.models import Address, Blacklist
 from pollingstations.models import PollingStation, PollingDistrict
 from councils.models import Council
 
@@ -29,11 +30,6 @@ class Command(BaseCommand):
         print("..updated")
 
 
-        print("updating point for: Manchester Central Library...")
-        update_station_point('E08000003', '3019',
-            Point(-2.24415, 53.47784, srid=4326))
-
-
         print("updating point for: CLASSROOM HS210, WALSALL COLLEGE...")
         update_station_point('E08000030', '15',
             Point(-1.984424, 52.590524, srid=4326))
@@ -47,6 +43,37 @@ class Command(BaseCommand):
         print("updating point for: C3 Centre, Cambridge...")
         update_station_point('E07000008', '38',
             Point(0.1572, 52.2003, srid=4326))
+
+
+        print("removing point for: Leckhampstead Village Hall...")
+        update_station_point('E06000037', '3109', None)
+
+        print("removing dodgy blacklist entry (result of bad point in AddressBase)..")
+        blacklist = Blacklist.objects.filter(postcode='AB115QH')
+        if len(blacklist) == 2:
+            for b in blacklist:
+                b.delete()
+                print('..deleted')
+        else:
+            print('..NOT deleted')
+
+
+        print("removing bad point from AddressBase (UPRN 10090647993)")
+        try:
+            address = Address.objects.get(pk='10090647993')
+            address.delete()
+            print('..deleted')
+        except Address.DoesNotExist:
+            print('..NOT deleted')
+
+
+        print("removing bad point from AddressBase (UPRN 10091769090)")
+        try:
+            address = Address.objects.get(pk='10091769090')
+            address.delete()
+            print('..deleted')
+        except Address.DoesNotExist:
+            print('..NOT deleted')
 
 
         print("..done")

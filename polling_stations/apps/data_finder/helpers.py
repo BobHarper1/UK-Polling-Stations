@@ -255,6 +255,12 @@ def geocode(postcode):
     raise PostcodeError('Could not geocode from any source')
 
 
+def get_territory(postcode):
+    if postcode[:2] == 'BT':
+        return 'NI'
+    return 'GB'
+
+
 class AddressSorter:
     # Class for sorting sort a list of address objects
     # in a human-readable order.
@@ -452,7 +458,7 @@ class DirectionsHelper():
 class RoutingHelper():
 
     def __init__(self, postcode):
-        self.postcode = postcode.replace(' ', '').upper()
+        self.postcode = re.sub('[^A-Z0-9]', '', postcode.upper())
         self.Endpoint = namedtuple('Endpoint', ['view', 'kwargs'])
         self.get_addresses()
         self.get_councils_from_blacklist()
